@@ -440,12 +440,12 @@ void timeWithNumberOfMachines(std::size_t numberOfPassengers, std::size_t number
 
 int main()
 {
-	timeWithNumberOfMachines(4, 1, 1);
-	timeWithNumberOfMachines(4, 1, 2);
-	timeWithNumberOfMachines(4, 1, 3);
-	timeWithNumberOfMachines(4, 1, 4);
-	timeWithNumberOfMachines(10, 1, 10);
-	timeWithNumberOfMachines(20, 1, 10);
-	timeWithNumberOfMachines(100, 1, 10);
+	// timeWithNumberOfMachines(4, 1, 1);
+	// timeWithNumberOfMachines(4, 1, 2);
+	// timeWithNumberOfMachines(4, 1, 3);
+	// timeWithNumberOfMachines(4, 1, 4);
+	// timeWithNumberOfMachines(10, 1, 10);
+	// timeWithNumberOfMachines(20, 1, 10);
+	timeWithNumberOfMachines(200, 1, 1);
 	return 0;
 }

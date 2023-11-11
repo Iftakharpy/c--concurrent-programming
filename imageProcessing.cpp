@@ -108,8 +108,6 @@ int main()
     ss << file.rdbuf();
     std::string kernelSource = ss.str();
 
-    const char* kernelSourcePtr = kernelSource.c_str();
-
     auto program_start = chrono::high_resolution_clock::now();
     auto begin = chrono::high_resolution_clock::now();
     // Prepare images
@@ -216,30 +214,34 @@ int main()
     std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - program_start).count() << "[ms]: Total time" << std::endl;
 
 
-    // Show random pixels of image1
-    std::cout << std::endl << "Image1: ";
-    for (int i = 0; i < imageSize; i++)
-    {
-        std::cout << image1[i] << ", ";
+    bool showPixels = false;
+    if (showPixels){
+        size_t showPixelCount = 5;
+        // Show random pixels of image1
+        std::cout << std::endl << "Image1: ";
+        for (size_t i = 0; i < showPixelCount; i++)
+        {
+            std::cout << image1[i] << ", ";
+        }
+        std::cout << std::endl << std::endl;
+
+        // Show random pixels of image2
+        std::cout << "Image2: ";
+        for (size_t i = 0; i < showPixelCount; i++)
+        {
+            std::cout << image2[i] << ", ";
+        }
+        std::cout << std::endl << std::endl;
+
+
+        // Show random pixels of result
+        std::cout << "Result: ";
+        for (size_t i = 0; i < showPixelCount; i++)
+        {
+            std::cout << result[i] << ", ";
+        }
+        std::cout << std::endl << std::endl;
     }
-    std::cout << std::endl << std::endl;
-
-    // // Show random pixels of image2
-    // std::cout << "Image2: ";
-    // for (int i = 0; i < 5; i++)
-    // {
-    //     std::cout << image2[i] << ", ";
-    // }
-    // std::cout << std::endl << std::endl;
-
-
-    // // Show random pixels of result
-    // std::cout << "Result: ";
-    // for (int i = 0; i < 5; i++)
-    // {
-    //     std::cout << result[i] << ", ";
-    // }
-    // std::cout << std::endl << std::endl;
 
     return 0;
 }

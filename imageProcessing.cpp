@@ -1,6 +1,9 @@
+#include <CL/opencl.hpp>
 #include <iostream>
 #include <chrono>
-#include <CL/cl.h>
+
+// C++ OpenCL API Spec: https://registry.khronos.org/OpenCL/specs/3.0-unified/pdf/OpenCL_API.pdf
+
 
 using namespace std;
 
@@ -11,31 +14,79 @@ struct Pixel
     float blue;
 };
 
-
-void addPixelColors(const Pixel* image1, const Pixel* image2, Pixel* result, int imageSize)
-{
-    for (int i = 0; i < imageSize; i++)
+const char* kernelSource = R"(
+    kernel void addPixelColors(__global const float* image1,
+                               __global const float* image2,
+                               __global float* result,
+                               int imageSize)
     {
-        result[i].red = image1[i].red + image2[i].red;
-        if (result[i].red > 1.0f)
-        {
-            result[i].red = 1.0f;
-        }
-
-        result[i].green = image1[i].green + image2[i].green;
-        if (result[i].green > 1.0f)
-        {
-            result[i].green = 1.0f;
-        }
-
-        result[i].blue = image1[i].blue + image2[i].blue;
-        if (result[i].blue > 1.0f)
-        {
-            result[i].blue = 1.0f;
-        }
+        int i = get_global_id(0);
+        
+        result[i * 3] = fmin(image1[i * 3] + image2[i * 3], 1.0f);
+        result[i * 3 + 1] = fmin(image1[i * 3 + 1] + image2[i * 3 + 1], 1.0f);
+        result[i * 3 + 2] = fmin(image1[i * 3 + 2] + image2[i * 3 + 2], 1.0f);
     }
-}
+)";
 
+void addPixelColorsOpenCL(const Pixel* image1, const Pixel* image2, Pixel* result, int imageSize)
+{
+    // Get available OpenCL platforms
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+
+    if (platforms.empty()) {
+        std::cerr << "No OpenCL platforms found." << std::endl;
+        return;
+    }
+
+    // Choose the first platform
+    cl::Platform platform = platforms.front();
+
+    // Get available OpenCL devices for the chosen platform
+    std::vector<cl::Device> devices;
+    platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+
+    if (devices.empty()) {
+        std::cerr << "No OpenCL devices found." << std::endl;
+        return;
+    }
+
+    // Choose the first device
+    cl::Device device = devices.front();
+
+    // Create an OpenCL context
+    cl::Context context(device);
+
+    // Create a command queue for the chosen device
+    cl::CommandQueue queue(context, device);
+
+    // Create an OpenCL program from the kernel source
+    cl::Program program(context, kernelSource);
+
+    // Build the OpenCL program
+    program.build("-cl-std=CL3.0");
+
+    // Create OpenCL buffers for input and output data
+    cl::Buffer bufferImage1(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(Pixel) * imageSize, (void*)image1);
+    cl::Buffer bufferImage2(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(Pixel) * imageSize, (void*)image2);
+    cl::Buffer bufferResult(context, CL_MEM_WRITE_ONLY, sizeof(Pixel) * imageSize);
+
+    // Create an OpenCL kernel from the program
+    cl::Kernel kernel(program, "addPixelColors");
+
+    // Set kernel arguments
+    kernel.setArg(0, bufferImage1);
+    kernel.setArg(1, bufferImage2);
+    kernel.setArg(2, bufferResult);
+    kernel.setArg(3, imageSize);
+
+    // Execute the OpenCL kernel
+    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(imageSize), cl::NullRange);
+    queue.finish();
+
+    // Read the result back to the host
+    queue.enqueueReadBuffer(bufferResult, CL_TRUE, 0, sizeof(Pixel) * imageSize, result);
+}
 
 Pixel* createPixels(int imageSize)
 {
@@ -49,7 +100,6 @@ Pixel* createPixels(int imageSize)
     return image;
 }
 
-
 int main()
 {
     chrono::steady_clock::time_point begin = chrono::steady_clock::now();
@@ -59,7 +109,7 @@ int main()
     Pixel* image2 = createPixels(imageSize);
     Pixel* result = new Pixel[imageSize];
 
-    addPixelColors(image1, image2, result, imageSize);
+    addPixelColorsOpenCL(image1, image2, result, imageSize);
 
     chrono::steady_clock::time_point end = chrono::steady_clock::now();
 

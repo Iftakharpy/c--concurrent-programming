@@ -1,4 +1,5 @@
 /*
+Program output:
 Execution time using 1 threads: 4988[ms]
 Execution time using 2 threads: 29232[ms]
 Execution time using 4 threads: 20293[ms]

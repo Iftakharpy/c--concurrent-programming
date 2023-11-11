@@ -1,3 +1,15 @@
+/*
+Program output:
+Took 0[ms]: To prepare the images
+Took 53[ms]: To Set up OpenCL
+Took 401[ms]: To build OpenCL program/kernal
+Took 595[ms]: To fill images with random pixels
+seed val1: 0
+Took 35[ms]: To set OpenCL addPixelColorsKernel arguments
+Took 75[ms]: To read result back from OpenCL device
+Took 1427[ms]: Total time
+*/
+
 // C++ OpenCL 3.0 API Spec: https://registry.khronos.org/OpenCL/specs/3.0-unified/pdf/OpenCL_API.pdf
 // C++ OpenCL 3.0 Reference guide: https://www.khronos.org/files/opencl30-reference-guide.pdf
 #include <CL/opencl.hpp>

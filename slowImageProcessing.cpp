@@ -4,6 +4,11 @@ creates two images from them and uses addPixelColors function to produce a third
 Modify this program to execute in parallel for the performance gain.
 Try to analyze the code to identify the concurrent parts.
 After each modification, measure and note the gains in your source code.
+
+Program output:
+Took 4396[ms]: To prepare the images
+Took 1407[ms]: To add pixel colors
+Execution time: 5803[ms]
 */
 
 

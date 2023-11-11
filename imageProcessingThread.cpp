@@ -66,8 +66,8 @@ int main()
 
     for (int i = 0; i < num_threads; i++)
     {
-        // The idea is to split the entire image into sections for each thread to work on
-        threads[i] = thread(work_on_pixels, i * imageSize / num_threads, (i + 1) * imageSize / num_threads, image1, image2, result);
+        // Split sections of the image to different threads
+        threads[i] = thread(work_on_pixels, i * (imageSize / num_threads), (i + 1) * (imageSize / num_threads), image1, image2, result);
     }
 
     for (int i = 0; i < num_threads; i++)

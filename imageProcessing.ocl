@@ -1,0 +1,38 @@
+// Simple Linear Congruential Generator (LCG) for generating random numbers in
+// an OpenCL kernel
+// Function to generate a random number between 0 and 1
+float random(__global ulong *seed) {
+	// Pseudo-random number generation using LCG
+	ulong a = 1664525;
+	ulong c = 1013904223;
+	ulong m = 4294967296;  // 2^32
+
+	*seed = (a * (*seed) + c) % m;
+	float randValue = (float)*seed / (float)m;
+	return randValue;
+}
+
+__kernel void generateRandomPixels(__global float4 *image, const int imageSize, __global ulong *seed) {
+  int i = get_global_id(0);
+  if (i < imageSize) {
+    image[i].x = random(seed);
+    image[i].y = random(seed);
+    image[i].z = random(seed);
+  }
+	*seed = *seed + i;
+	mem_fence(CLK_GLOBAL_MEM_FENCE);
+}
+
+__kernel void addPixelColors(__global const float4 *image1,
+                             __global const float4 *image2,
+                             __global float4 *result, const int imageSize) {
+  int i = get_global_id(0);
+  if (i < imageSize) {
+    float4 pixel1 = image1[i];
+    float4 pixel2 = image2[i];
+
+    result[i].x = fmin(pixel1.x + pixel2.x, 1.0f);
+    result[i].y = fmin(pixel1.y + pixel2.y, 1.0f);
+    result[i].z = fmin(pixel1.z + pixel2.z, 1.0f);
+  }
+}

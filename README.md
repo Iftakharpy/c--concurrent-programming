@@ -27,4 +27,5 @@ sudo dpkg -i *.deb
 F2C="openclHello" && g++ -Wall -Wextra -std=c++23 -D CL_HPP_TARGET_OPENCL_VERSION=300 -D CL_TARGET_OPENCL_VERSION=300 $(echo "$(pwd)/$F2C.cpp") -o $(echo $F2C) -lOpenCL && ./$(echo $F2C)
 ```
 
-C++ OpenCL API Spec: https://registry.khronos.org/OpenCL/specs/3.0-unified/pdf/OpenCL_API.pdf
+C++ OpenCL 3.0 API Spec: https://registry.khronos.org/OpenCL/specs/3.0-unified/pdf/OpenCL_API.pdf
+C++ OpenCL 3.0 Reference guide: https://www.khronos.org/files/opencl30-reference-guide.pdf

@@ -1,8 +1,10 @@
+// C++ OpenCL 3.0 API Spec: https://registry.khronos.org/OpenCL/specs/3.0-unified/pdf/OpenCL_API.pdf
+// C++ OpenCL 3.0 Reference guide: https://www.khronos.org/files/opencl30-reference-guide.pdf
 #include <CL/opencl.hpp>
 #include <iostream>
 #include <chrono>
-
-// C++ OpenCL API Spec: https://registry.khronos.org/OpenCL/specs/3.0-unified/pdf/OpenCL_API.pdf
+#include <fstream>
+#include <sstream>
 
 
 using namespace std;
@@ -14,108 +16,230 @@ struct Pixel
     float blue;
 };
 
-const char* kernelSource = R"(
-    kernel void addPixelColors(__global const float* image1,
-                               __global const float* image2,
-                               __global float* result,
-                               int imageSize)
-    {
-        int i = get_global_id(0);
-        
-        result[i * 3] = fmin(image1[i * 3] + image2[i * 3], 1.0f);
-        result[i * 3 + 1] = fmin(image1[i * 3 + 1] + image2[i * 3 + 1], 1.0f);
-        result[i * 3 + 2] = fmin(image1[i * 3 + 2] + image2[i * 3 + 2], 1.0f);
-    }
-)";
-
-void addPixelColorsOpenCL(const Pixel* image1, const Pixel* image2, Pixel* result, int imageSize)
-{
-    // Get available OpenCL platforms
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    if (platforms.empty()) {
-        std::cerr << "No OpenCL platforms found." << std::endl;
-        return;
-    }
-
-    // Choose the first platform
-    cl::Platform platform = platforms.front();
-
-    // Get available OpenCL devices for the chosen platform
-    std::vector<cl::Device> devices;
-    platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
-
-    if (devices.empty()) {
-        std::cerr << "No OpenCL devices found." << std::endl;
-        return;
-    }
-
-    // Choose the first device
-    cl::Device device = devices.front();
-
-    // Create an OpenCL context
-    cl::Context context(device);
-
-    // Create a command queue for the chosen device
-    cl::CommandQueue queue(context, device);
-
-    // Create an OpenCL program from the kernel source
-    cl::Program program(context, kernelSource);
-
-    // Build the OpenCL program
-    program.build("-cl-std=CL3.0");
-
-    // Create OpenCL buffers for input and output data
-    cl::Buffer bufferImage1(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(Pixel) * imageSize, (void*)image1);
-    cl::Buffer bufferImage2(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(Pixel) * imageSize, (void*)image2);
-    cl::Buffer bufferResult(context, CL_MEM_WRITE_ONLY, sizeof(Pixel) * imageSize);
-
-    // Create an OpenCL kernel from the program
-    cl::Kernel kernel(program, "addPixelColors");
-
-    // Set kernel arguments
-    kernel.setArg(0, bufferImage1);
-    kernel.setArg(1, bufferImage2);
-    kernel.setArg(2, bufferResult);
-    kernel.setArg(3, imageSize);
-
-    // Execute the OpenCL kernel
-    queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(imageSize), cl::NullRange);
-    queue.finish();
-
-    // Read the result back to the host
-    queue.enqueueReadBuffer(bufferResult, CL_TRUE, 0, sizeof(Pixel) * imageSize, result);
+ostream& operator<<(ostream& os, const Pixel& book) {
+    return os << "P(" << book.red << ", " << book.green << ", " << book.blue << ")";
 }
+
+
 
 Pixel* createPixels(int imageSize)
 {
     Pixel* image = new Pixel[imageSize];
     for (int i = 0; i < imageSize; i++)
     {
-        image[i].red = (float(rand())/float((RAND_MAX)));
-        image[i].green = (float(rand())/float((RAND_MAX)));
-        image[i].blue = (float(rand())/float((RAND_MAX)));
+        image[i].red = (float(rand()) / float((RAND_MAX)));
+        image[i].green = (float(rand()) / float((RAND_MAX)));
+        image[i].blue = (float(rand()) / float((RAND_MAX)));
     }
     return image;
 }
 
+
+
+
+cl::Platform getDefaultOpenCLPlatform(bool verbose = false)
+{
+	// get all platforms (drivers)
+	std::vector<cl::Platform> all_platforms;
+	cl::Platform::get(&all_platforms);
+	if (all_platforms.size() == 0)
+	{
+		if (verbose)
+			std::cout << "No platforms found. Check OpenCL installation!" << std::endl;
+		;
+		exit(1);
+	}
+	cl::Platform default_platform = all_platforms[0];
+	if (verbose)
+	{
+		std::cout << "All platforms:" << std::endl;
+		for (size_t i = 0; i < all_platforms.size(); i++)
+		{
+			std::cout << "\tPlatform " << i << ": " << all_platforms[i].getInfo<CL_PLATFORM_NAME>() << std::endl;
+		}
+		std::cout << "Using platform: " << default_platform.getInfo<CL_PLATFORM_NAME>() << std::endl;
+	};
+	return default_platform;
+}
+
+cl::Device getDefaultOpenCLDevice(cl::Platform platform, bool verbose = false)
+{
+	// get default device of the default platform
+	std::vector<cl::Device> all_devices;
+	platform.getDevices(CL_DEVICE_TYPE_ALL, &all_devices);
+	if (all_devices.size() == 0)
+	{
+		if (verbose)
+			std::cout << "No devices found. Check OpenCL installation!" << std::endl;
+		exit(1);
+	}
+
+	// use device[1] because that's a GPU; device[0] is the CPU
+	// cl::Device default_device = all_devices [ 1 ];
+	// std::cout << "Using device: " << default_device.getInfo < CL_DEVICE_NAME >()<< "\n" ;
+	// use device[0] because that's a CPU; device[1] is the GPU (if available)
+	// I don't have a GPU, so I'm using the CPU
+	cl::Device default_device = all_devices[0];
+
+	if (verbose)
+	{
+		std::cout << "All devices:" << std::endl;
+		for (size_t i = 0; i < all_devices.size(); i++)
+		{
+			std::cout << "\tDevice " << i << ": " << all_devices[i].getInfo<CL_DEVICE_NAME>() << std::endl;
+		}
+		std::cout << "Using device: " << default_device.getInfo<CL_DEVICE_NAME>() << "\n";
+	}
+	return default_device;
+}
+
+
+
 int main()
 {
-    chrono::steady_clock::time_point begin = chrono::steady_clock::now();
 
+    std::ifstream file("imageProcessing.ocl");
+    if (!file.is_open()) {
+        std::cerr << "Failed to open kernel file" << std::endl;
+        return -1;
+    }
+
+    std::ostringstream ss;
+    ss << file.rdbuf();
+    std::string kernelSource = ss.str();
+
+    const char* kernelSourcePtr = kernelSource.c_str();
+
+    auto program_start = chrono::high_resolution_clock::now();
+    auto begin = chrono::high_resolution_clock::now();
+    // Prepare images
     constexpr int imageSize = 4096 * 4096;
-    Pixel* image1 = createPixels(imageSize);
-    Pixel* image2 = createPixels(imageSize);
+    // Pixel* image1 = createPixels(imageSize);
+    // Pixel* image2 = createPixels(imageSize);
+    Pixel* image1 = new Pixel[imageSize];
+    Pixel* image2 = new Pixel[imageSize];
     Pixel* result = new Pixel[imageSize];
+    // Prepared images
+    auto end = chrono::high_resolution_clock::now();
+    std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]: To prepare the images" << std::endl;
 
-    addPixelColorsOpenCL(image1, image2, result, imageSize);
 
-    chrono::steady_clock::time_point end = chrono::steady_clock::now();
+    begin = chrono::high_resolution_clock::now();
+    // OpenCL setup
+    cl::Platform default_platform = getDefaultOpenCLPlatform();
+    cl::Device default_device = getDefaultOpenCLDevice(default_platform);
+    cl::Context context({default_device});
+    cl::CommandQueue queue(context, default_device);
+    // OpenCL setup finished
+    end = chrono::high_resolution_clock::now();
+    std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]: To Set up OpenCL" << std::endl;
+    
 
-    cout << "Execution time: " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]\n";
+    // Create OpenCL buffer for the image
+    cl::Buffer oclBufferImage1(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                               sizeof(Pixel) * imageSize, image1);
+    cl::Buffer oclBufferImage2(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
+                                 sizeof(Pixel) * imageSize, image2);
+    cl::Buffer oclBufferResult(context, CL_MEM_WRITE_ONLY,
+                                 sizeof(Pixel) * imageSize);
 
-    delete[] result;
-    delete[] image2;
-    delete[] image1;
+
+    begin = chrono::high_resolution_clock::now();
+    // Build OpenCL program and create addPixelColorsKernel
+    cl::Program program(context, kernelSource);
+    auto err = program.build("-cl-std=CL3.0");
+    if (err != CL_SUCCESS)
+	{
+		std::cout << "Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device) << std::endl;
+		exit(1);
+	}
+    cl::Kernel generateRandomPixelsKernel(program, "generateRandomPixels");
+    cl::Kernel addPixelColorsKernel(program, "addPixelColors");
+    // OpenCL program/kernal built
+    end = chrono::high_resolution_clock::now();
+    std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]: To build OpenCL program/kernal" << std::endl;
+
+
+    size_t globalWorkSize = imageSize;
+    begin = chrono::high_resolution_clock::now();
+    // Generate random pixels for image1
+    unsigned long seedImg1 = 0;
+    generateRandomPixelsKernel.setArg(0, oclBufferImage1);
+    generateRandomPixelsKernel.setArg(1, imageSize);
+    generateRandomPixelsKernel.setArg(2, seedImg1);
+    queue.enqueueNDRangeKernel(generateRandomPixelsKernel, cl::NullRange, globalWorkSize, cl::NullRange);
+    queue.finish();
+    // Read result back from OpenCL device
+    queue.enqueueReadBuffer(oclBufferImage1, CL_TRUE, 0, sizeof(Pixel) * imageSize, image1);
+    queue.finish();
+
+    // Generate random pixels for image2
+    // unsigned long seedImg2 = 0;
+    generateRandomPixelsKernel.setArg(0, oclBufferImage2);
+    generateRandomPixelsKernel.setArg(1, imageSize);
+    generateRandomPixelsKernel.setArg(2, seedImg1);
+    queue.enqueueNDRangeKernel(generateRandomPixelsKernel, cl::NullRange, globalWorkSize, cl::NullRange);
+    queue.finish();
+    // Read result back from OpenCL device
+    queue.enqueueReadBuffer(oclBufferImage2, CL_TRUE, 0, sizeof(Pixel) * imageSize, image2);
+    queue.finish();
+    // Filled with random pixels
+    end = chrono::high_resolution_clock::now();
+    std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]: To fill images with random pixels" << std::endl;
+
+
+    std::cout << "seed val1: " << seedImg1 << std::endl;
+    // std::cout << "seed val2: " << seedImg2 << std::endl;
+
+    begin = chrono::high_resolution_clock::now();
+    // OpenCL addPixelColorsKernel to result
+    addPixelColorsKernel.setArg(0, oclBufferImage1);
+    addPixelColorsKernel.setArg(1, oclBufferImage2);
+    addPixelColorsKernel.setArg(2, oclBufferResult);
+    addPixelColorsKernel.setArg(3, imageSize);
+    queue.enqueueNDRangeKernel(addPixelColorsKernel, cl::NullRange, globalWorkSize, cl::NullRange);
+    queue.finish();
+    // OpenCL addPixelColorsKernel arguments set
+    end = chrono::high_resolution_clock::now();
+    std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]: To set OpenCL addPixelColorsKernel arguments" << std::endl;
+
+
+    begin = chrono::high_resolution_clock::now();
+    // Read result back from OpenCL device
+    queue.enqueueReadBuffer(oclBufferResult, CL_TRUE, 0, sizeof(Pixel) * imageSize, result);
+    // Result read back from OpenCL device
+    end = chrono::high_resolution_clock::now();
+    std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - begin).count() << "[ms]: To read result back from OpenCL device" << std::endl;
+    
+
+    end = chrono::high_resolution_clock::now();
+    std::cout << "Took " << chrono::duration_cast<chrono::milliseconds>(end - program_start).count() << "[ms]: Total time" << std::endl;
+
+
+    // Show random pixels of image1
+    std::cout << std::endl << "Image1: ";
+    for (int i = 0; i < imageSize; i++)
+    {
+        std::cout << image1[i] << ", ";
+    }
+    std::cout << std::endl << std::endl;
+
+    // // Show random pixels of image2
+    // std::cout << "Image2: ";
+    // for (int i = 0; i < 5; i++)
+    // {
+    //     std::cout << image2[i] << ", ";
+    // }
+    // std::cout << std::endl << std::endl;
+
+
+    // // Show random pixels of result
+    // std::cout << "Result: ";
+    // for (int i = 0; i < 5; i++)
+    // {
+    //     std::cout << result[i] << ", ";
+    // }
+    // std::cout << std::endl << std::endl;
+
+    return 0;
 }

@@ -61,6 +61,10 @@ const char *kernelSource = R"(
     kernel void hello_world() {
         printf("Hello, World! from OpenCL\\n");
     }
+    
+	kernel void hello_me() {
+        printf("Hello, You! from OpenCL\\n");
+    }
 )";
 
 int main()
@@ -78,13 +82,20 @@ int main()
 	cl::Program program(context, kernelSource);
 
 	// Build the OpenCL program
-	program.build("-cl-std=CL3.0");
+	auto err = program.build("-cl-std=CL3.0");
+	if (err != CL_SUCCESS)
+	{
+		std::cout << "Error building: " << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(default_device) << std::endl;
+		exit(1);
+	}
 
 	// Create an OpenCL kernel from the program
-	cl::Kernel kernel(program, "hello_world");
+	cl::Kernel hello_world_kernel(program, "hello_world");
+	cl::Kernel hello_me_kernel(program, "hello_me");
 
 	// Execute the OpenCL kernel
-	queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
+	queue.enqueueNDRangeKernel(hello_world_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
+	queue.enqueueNDRangeKernel(hello_me_kernel, cl::NullRange, cl::NDRange(1), cl::NullRange);
 	queue.finish();
 	return 0;
 }

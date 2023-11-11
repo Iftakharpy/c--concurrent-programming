@@ -29,3 +29,4 @@ F2C="openclHello" && g++ -Wall -Wextra -std=c++23 -D CL_HPP_TARGET_OPENCL_VERSIO
 
 C++ OpenCL 3.0 API Spec: https://registry.khronos.org/OpenCL/specs/3.0-unified/pdf/OpenCL_API.pdf
 C++ OpenCL 3.0 Reference guide: https://www.khronos.org/files/opencl30-reference-guide.pdf
+The OpenCL C Programming Language: https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html

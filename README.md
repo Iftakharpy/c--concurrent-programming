@@ -3,7 +3,7 @@
 ## Compile and run a c++ file
 
 ```bash
-F2C="airport" && g++ -Wall -std=c++23 $(echo "$(pwd)/$F2C.cpp") -o $(echo $F2C) && ./$(echo $F2C)
+F2C="airport" && g++ -Wall -Wextra -std=c++23 $(echo "$(pwd)/$F2C.cpp") -o $(echo $F2C) && ./$(echo $F2C)
 ```
 
 ## To use OpenCL on Linux

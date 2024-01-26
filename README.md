@@ -1,5 +1,7 @@
 # C++ Concurrent Programming
 
+These files are exercises from `Concurrent Programming` course that I was doing at `Jamk University of Applied Sciences`.
+
 ## Compile and run a c++ file
 
 ```bash
